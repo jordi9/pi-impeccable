@@ -119,7 +119,7 @@ export default function impeccableExtension(pi: ExtensionAPI) {
 			if (head === "status") return showLiveStatus(pi, live, ctx);
 
 			if (!isAgentCommand(head)) return notifyOrDisplay(pi, ctx, unknownCommandText(head), "warning");
-			showTransientStatus(ctx, queuedCommandText(head, args));
+			showTransientStatus(ctx, `${head} queued`);
 			const skillRoot = await ensureSkill(pi, ctx);
 			if (!skillRoot) return;
 			sendExtensionPrompt(pi, ctx, commandPrompt(args, skillRoot), "followUp");
@@ -483,15 +483,6 @@ function option(tokens: string[], name: string) {
 	if (inline) return inline.slice(prefix.length);
 	const idx = tokens.indexOf(`--${name}`);
 	return idx >= 0 ? tokens[idx + 1] : undefined;
-}
-
-function queuedCommandText(command: string, args: string) {
-	const rest = args.trim().replace(/^(?:"[^"]*"|'[^']*'|\S+)\s*/, "").trim().replace(/\s+/g, " ");
-	return rest ? `${command} queued · ${compactInline(rest, 64)}` : `${command} queued`;
-}
-
-function compactInline(text: string, maxLength: number) {
-	return text.length <= maxLength ? text : `${text.slice(0, Math.max(0, maxLength - 1))}…`;
 }
 
 function tokenize(input: string) {
