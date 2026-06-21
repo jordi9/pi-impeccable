@@ -6,7 +6,7 @@ Run [Impeccable](https://impeccable.style/) skills from Pi without blocking the 
   <img src="docs/images/screenshot.jpg" alt="Impeccable live mode running in Pi" width="720">
 </p>
 
-`pi-impeccable` is a thin Pi extension for the upstream [`impeccable`](https://github.com/pbakaus/impeccable) package. It installs or updates the Impeccable skill in your project, then bridges Impeccable live mode through Pi in the background.
+`pi-impeccable` is a Pi integration for the incredible [`impeccable`](https://github.com/pbakaus/impeccable) package. It installs or updates the Impeccable skill in your project, then runs Impeccable live mode through Pi in the background.
 
 That means you can keep chatting with the agent while Impeccable watches the browser, queues design feedback, and asks Pi to respond. No long-running `live-poll.mjs` command holds the shell hostage.
 
@@ -62,3 +62,32 @@ Check or stop live mode:
 ```
 
 You can also say `stop live` to stop it quietly.
+
+## Release
+
+Releases are tag-driven:
+
+1. `jj` owns the working-copy commit and `main` bookmark.
+2. `git` owns release tags.
+3. GitHub Actions publishes to npm, generates release notes with `git-cliff`, and creates the GitHub Release.
+
+First release:
+
+```bash
+pnpm release:check
+
+git-cliff --unreleased --tag v0.1.0   # optional release-notes preview
+
+jj describe -m "chore: prepare v0.1.0 release"
+jj bookmark move main -r @
+jj git push 
+
+git tag v0.1.0 main
+git push origin v0.1.0                # publishes to npm and creates the GitHub Release
+```
+
+Later releases use the same flow: bump `package.json`, update `CHANGELOG.md`, preview notes with `git-cliff --unreleased --tag vX.Y.Z`, push `main`, then create and push the matching Git tag.
+
+## License
+
+Apache-2.0 as Impeccable.
