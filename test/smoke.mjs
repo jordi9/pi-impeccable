@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 
-import impeccableExtension, { parseCommandDescriptions, parseCommandMetadata, summarizeLiveStatus } from '../extensions/impeccable.ts';
+import impeccableExtension, { parseCommandMetadata, summarizeLiveStatus } from '../extensions/impeccable.ts';
 
 const root = path.resolve(import.meta.dirname, '..');
 
@@ -115,48 +115,6 @@ test('resources_discover publishes an installed project skill path', async (t) =
 	const result = await harness.emit('resources_discover', { cwd: nested });
 
 	assert.deepEqual(result, { skillPaths: [skillRoot] });
-});
-
-test('argument completions use descriptions from the installed skill', async (t) => {
-	const skillMarkdown = `
-| Command | Category | Description | Reference |
-|---|---|---|---|
-| \`craft [feature]\` | Build | Shape, then build a feature end-to-end | [reference/craft.md](reference/craft.md) |
-| \`live\` | Iterate | Visual variant mode: pick elements in the browser, generate alternatives | [reference/live.md](reference/live.md) |
-
-**Pin** creates a standalone shortcut so \`$<command>\` invokes \`$impeccable <command>\` directly. **Unpin** removes it.
-\`$impeccable hooks <on|off|status|ignore-rule|ignore-file|ignore-value|reset>\` manages the design detector hook for this project.
-`;
-	const descriptions = parseCommandDescriptions(skillMarkdown);
-	assert.equal(descriptions.get('craft'), 'Shape, then build a feature end-to-end');
-	assert.equal(descriptions.get('pin'), 'Pin creates a standalone shortcut so $<command> invokes $impeccable <command> directly.');
-	assert.equal(descriptions.get('hooks'), 'Manages the design detector hook for this project.');
-
-	const { project, skillRoot } = makeProject(t);
-	fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), skillMarkdown);
-	const harness = loadExtension();
-	const ctx = makeContext(project);
-	await harness.emit('session_start', {}, ctx);
-
-	const completions = await harness.commands.get('impeccable').getArgumentCompletions('li');
-
-	assert.deepEqual(completions, [{
-		value: 'live',
-		label: 'live',
-		description: 'Visual variant mode: pick elements in the browser, generate alternatives',
-	}]);
-
-	assert.deepEqual(await harness.commands.get('impeccable').getArgumentCompletions('st'), [
-		{ value: 'status', label: 'status', description: 'Show Impeccable live server/session status' },
-		{ value: 'stop', label: 'stop', description: 'Stop Impeccable live mode and polling' },
-	]);
-	assert.deepEqual(await harness.commands.get('impeccable').getArgumentCompletions('up'), [
-		{ value: 'update', label: 'update', description: 'Update installed Impeccable skill files' },
-	]);
-	assert.equal(
-		(await harness.commands.get('impeccable').getArgumentCompletions('in')).find(({ value }) => value === 'install').description,
-		'Install Impeccable skill files into this project',
-	);
 });
 
 test('argument completions prefer installed command metadata', async (t) => {

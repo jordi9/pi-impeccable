@@ -606,37 +606,11 @@ function installedCommandDescriptions(cwd: string) {
 	const skillRoot = locateSkill(cwd);
 	if (!skillRoot) return new Map<string, string>();
 
-	const descriptions = new Map<string, string>();
 	try {
-		for (const [command, description] of parseCommandDescriptions(readFileSync(join(skillRoot, "SKILL.md"), "utf8"))) {
-			descriptions.set(command, description);
-		}
-	} catch { /* SKILL.md absent or unreadable */ }
-
-	try {
-		for (const [command, description] of parseCommandMetadata(readFileSync(join(skillRoot, "scripts", "command-metadata.json"), "utf8"))) {
-			descriptions.set(command, description);
-		}
-	} catch { /* metadata absent on older Impeccable installs */ }
-
-	return descriptions;
-}
-
-export function parseCommandDescriptions(markdown: string) {
-	const descriptions = new Map<string, string>();
-	for (const line of markdown.split(/\r?\n/)) {
-		const match = line.match(/^\|\s*`([^`\s]+)(?:\s+[^`]*)?`\s*\|\s*[^|]*\|\s*([^|]+?)\s*\|/);
-		if (match) descriptions.set(match[1], cleanDescription(match[2]));
+		return parseCommandMetadata(readFileSync(join(skillRoot, "scripts", "command-metadata.json"), "utf8"));
+	} catch {
+		return new Map<string, string>();
 	}
-
-	const pin = markdown.match(/\*\*Pin\*\*\s+([^\n.]+\.)/);
-	if (pin) descriptions.set("pin", cleanDescription(`Pin ${pin[1]}`));
-	const unpin = markdown.match(/\*\*Unpin\*\*\s+([^\n.]+\.)/);
-	if (unpin) descriptions.set("unpin", cleanDescription(`Unpin ${unpin[1]}`));
-	const hooks = markdown.match(/`\$impeccable hooks[^`]+`\s+([^\n.]+\.)/);
-	if (hooks) descriptions.set("hooks", capitalize(cleanDescription(hooks[1])));
-
-	return descriptions;
 }
 
 export function parseCommandMetadata(json: string) {
@@ -663,9 +637,6 @@ function cleanDescription(description: string) {
 		.trim();
 }
 
-function capitalize(value: string) {
-	return value ? value[0].toUpperCase() + value.slice(1) : value;
-}
 
 function unknownCommandText(command: string) {
 	return `Unknown Impeccable command: ${command}. Try /impeccable live.`;
