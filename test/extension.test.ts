@@ -234,6 +234,34 @@ describe('impeccable extension', () => {
     });
   });
 
+  test('session shutdown stops live server and ignores killed polls', async () => {
+    const stopArgs = path.join(
+      os.tmpdir(),
+      `pi-impeccable-stop-${process.pid}.json`,
+    );
+    onTestFinished(() => fs.rmSync(stopArgs, { force: true }));
+    const { project } = makeProject({
+      'live.mjs': 'console.log(JSON.stringify({ ok: true }));\n',
+      'live-poll.mjs': `setTimeout(() => console.log(JSON.stringify({ type: 'generate', id: 'late' })), 5000);\n`,
+      'live-server.mjs': `
+        import fs from 'node:fs';
+        if (process.argv.includes('stop')) fs.writeFileSync(${JSON.stringify(stopArgs)}, JSON.stringify(process.argv.slice(2)));
+      `,
+    });
+    const harness = loadExtension();
+    const ctx = makeContext(project);
+
+    await runCommand(harness, 'live', ctx);
+    await harness.emit('session_shutdown', {}, ctx);
+    await delay(50);
+
+    expect(JSON.parse(fs.readFileSync(stopArgs, 'utf8'))).toEqual(['stop']);
+    expect(harness.messages).toEqual([]);
+    expect(
+      ctx.ui.notifications.some((note) => /poll failed/.test(note.message)),
+    ).toBe(false);
+  });
+
   test('foreground live-poll bash calls are blocked', async () => {
     const harness = loadExtension();
     const ctx = makeContext(root);

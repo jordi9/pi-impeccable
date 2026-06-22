@@ -32,11 +32,27 @@ export default function impeccableExtension(pi: ExtensionAPI) {
     if (live.active) startIndicator(live, ctx);
   });
 
-  pi.on('session_shutdown', () => {
-    clearTransientStatus(ctxRef);
-    stopIndicator(live, ctxRef);
+  pi.on('session_shutdown', async (_event, ctx) => {
+    const wasActive = live.active || !!live.poll;
+    const cwd = live.cwd ?? ctx.cwd;
+    const skillRoot = live.skillRoot ?? locateSkill(cwd);
+
+    live.active = false;
+    live.pausedFor = undefined;
     killPoll(live);
+    clearTransientStatus(ctx);
+    stopIndicator(live, ctx);
     ctxRef = undefined;
+
+    if (wasActive && skillRoot) {
+      await runNode(
+        script(skillRoot, 'live-server.mjs'),
+        ['stop'],
+        cwd,
+        undefined,
+        30_000,
+      );
+    }
   });
 
   pi.on('input', async (event, ctx) => {
@@ -417,7 +433,8 @@ function startPoll(pi: ExtensionAPI, live: LiveState, ctx: ExtensionContext) {
   child.stdout.on('data', (chunk) => (stdout += String(chunk)));
   child.stderr.on('data', (chunk) => (stderr += String(chunk)));
   child.on('close', (code) => {
-    if (live.poll === child) live.poll = undefined;
+    if (live.poll !== child) return;
+    live.poll = undefined;
     if (!live.active) return;
     if (code !== 0) {
       live.pausedFor = 'poll-error';
